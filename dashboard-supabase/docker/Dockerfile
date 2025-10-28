@@ -13,6 +13,13 @@ RUN npm ci --only=production && npm cache clean --force
 # Copia o restante dos arquivos do projeto
 COPY . .
 
+# Define as variáveis de ambiente de build (serão injetadas pelo EasyPanel)
+ARG REACT_APP_SUPABASE_URL
+ARG REACT_APP_SUPABASE_ANON_KEY
+
+ENV REACT_APP_SUPABASE_URL=$REACT_APP_SUPABASE_URL
+ENV REACT_APP_SUPABASE_ANON_KEY=$REACT_APP_SUPABASE_ANON_KEY
+
 # Build da aplicação para produção
 RUN npm run build
 
