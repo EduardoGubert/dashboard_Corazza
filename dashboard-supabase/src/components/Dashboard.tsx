@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import LeadsChart from './Charts/LeadsChart';
 import SchedulesChart from './Charts/SchedulesChart';
-import BrokerChart from './Charts/BrokerChart';
+import BrokerLeadsChart from './Charts/BrokerLeadsChart';
+import BrokerLeadsDetailChart from './Charts/BrokerLeadsDetailChart';
 
 const Dashboard: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -37,8 +38,11 @@ const Dashboard: React.FC = () => {
                         <div className="bg-white shadow-lg rounded-lg p-6">
                             <SchedulesChart />
                         </div>
-                        <div className="bg-white shadow-lg rounded-lg p-6 col-span-1 md:col-span-2">
-                            <BrokerChart />
+                        <div className="bg-white shadow-lg rounded-lg p-6">
+                            <BrokerLeadsDetailChart />
+                        </div>
+                        <div className="bg-white shadow-lg rounded-lg p-6">
+                            <BrokerLeadsChart />
                         </div>
                     </div>
                 </div>

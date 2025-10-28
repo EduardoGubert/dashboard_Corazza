@@ -11,7 +11,9 @@ interface ScheduleData {
 const SchedulesChart: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [period, setPeriod] = useState<'7days' | '30days' | '90days' | 'all'>('30days');
+    const [period, setPeriod] = useState<'7days' | '30days' | '90days' | 'all' | 'custom'>('all');
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
     const [data, setData] = useState<ChartData<'line'>>({
         labels: [],
         datasets: [
@@ -33,6 +35,7 @@ const SchedulesChart: React.FC = () => {
             
             // Calcular data inicial baseada no período selecionado
             let startDate: Date | null = null;
+            let endDate: Date | null = null;
             const now = new Date();
             
             switch(period) {
@@ -45,21 +48,36 @@ const SchedulesChart: React.FC = () => {
                 case '90days':
                     startDate = new Date(now.setDate(now.getDate() - 90));
                     break;
+                case 'custom':
+                    if (customStartDate) {
+                        startDate = new Date(customStartDate);
+                        startDate.setHours(0, 0, 0, 0);
+                    }
+                    if (customEndDate) {
+                        endDate = new Date(customEndDate);
+                        endDate.setHours(23, 59, 59, 999);
+                    }
+                    break;
                 case 'all':
                 default:
                     startDate = null;
+                    endDate = null;
                     break;
             }
 
+            // ✅ CORREÇÃO: Agora busca o campo 'agendamento' também
             let query = supabase
                 .from('Cadastro_Clientes')
-                .select('created_at')
+                .select('created_at, agendamento')  // 👈 MUDANÇA AQUI: busca o campo agendamento
                 .not('agendamento', 'is', null)
                 .order('created_at', { ascending: true });
 
             // Aplicar filtro de data se necessário
             if (startDate) {
                 query = query.gte('created_at', startDate.toISOString());
+            }
+            if (endDate) {
+                query = query.lte('created_at', endDate.toISOString());
             }
 
             const { data: schedules, error } = await query;
@@ -71,6 +89,7 @@ const SchedulesChart: React.FC = () => {
             }
 
             console.log('✅ Dados recebidos:', schedules);
+            console.log('📊 Total de registros:', schedules?.length);
 
             if (!schedules || schedules.length === 0) {
                 setData({
@@ -86,13 +105,18 @@ const SchedulesChart: React.FC = () => {
                 return;
             }
 
-            // Agrupar por data e calcular acumulado
+            // ✅ CORREÇÃO: Agrupar por data e SOMAR os valores de agendamento
             const dateMap: Record<string, number> = {};
             
             schedules.forEach((schedule: any) => {
                 const date = new Date(schedule.created_at).toLocaleDateString('pt-BR');
-                dateMap[date] = (dateMap[date] || 0) + 1;
+                const agendamentoValue = Number(schedule.agendamento) || 0;  // 👈 Pega o VALOR do campo
+                
+                // Soma o VALOR do agendamento, não +1
+                dateMap[date] = (dateMap[date] || 0) + agendamentoValue;  // 👈 MUDANÇA AQUI
             });
+
+            console.log('📅 Agendamentos por data:', dateMap);
 
             // Ordenar as datas
             const sortedDates = Object.keys(dateMap).sort((a, b) => {
@@ -104,12 +128,14 @@ const SchedulesChart: React.FC = () => {
             // Calcular valores acumulados
             let accumulated = 0;
             const accumulatedValues = sortedDates.map(date => {
-                accumulated += dateMap[date];
+                accumulated += dateMap[date];  // Agora soma o VALOR CORRETO
                 return accumulated;
             });
 
             console.log('📈 Datas:', sortedDates);
+            console.log('📈 Valores por data:', sortedDates.map(d => dateMap[d]));
             console.log('📈 Valores acumulados:', accumulatedValues);
+            console.log('🎯 Total final de agendamentos:', accumulated);
 
             setData({
                 labels: sortedDates,
@@ -152,7 +178,7 @@ const SchedulesChart: React.FC = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [period]); // Recarrega quando o período muda
+    }, [period, customStartDate, customEndDate]); // Recarrega quando o período muda
 
     const options: ChartOptions<'line'> = {
         responsive: true,
@@ -220,11 +246,11 @@ const SchedulesChart: React.FC = () => {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-700">Agendamentos ao Longo do Tempo</h2>
+            <div className="mb-4">
+                <h2 className="text-xl font-semibold text-gray-700 mb-3">Agendamentos ao Longo do Tempo</h2>
                 
                 {/* Seletor de Período */}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
                     <button
                         onClick={() => setPeriod('7days')}
                         className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
@@ -265,20 +291,59 @@ const SchedulesChart: React.FC = () => {
                     >
                         Tudo
                     </button>
+                    <button
+                        onClick={() => setPeriod('custom')}
+                        className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                            period === 'custom' 
+                                ? 'bg-purple-600 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                    >
+                        📅 Período Personalizado
+                    </button>
                 </div>
+
+                {/* Seletor de Data Personalizado */}
+                {period === 'custom' && (
+                    <div className="mt-3 flex flex-wrap gap-3 items-center bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-gray-700">De:</label>
+                            <input
+                                type="date"
+                                value={customStartDate}
+                                onChange={(e) => setCustomStartDate(e.target.value)}
+                                className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-gray-700">Até:</label>
+                            <input
+                                type="date"
+                                value={customEndDate}
+                                onChange={(e) => setCustomEndDate(e.target.value)}
+                                className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                        </div>
+                        {customStartDate && customEndDate && (
+                            <span className="text-sm text-gray-600">
+                                ({Math.ceil((new Date(customEndDate).getTime() - new Date(customStartDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} dias)
+                            </span>
+                        )}
+                    </div>
+                )}
             </div>
             
             <Line data={data} options={options} />
             
             {/* Informação adicional */}
-            {/* <div className="mt-4 text-sm text-gray-600">
+            <div className="mt-4 text-sm text-gray-600">
                 <p>
                     <strong>Total de agendamentos no período:</strong> {' '}
                     {data.datasets[0].data.length > 0 
-                        ? data.datasets[0].data[data.datasets[0].data.length - 1] 
+                        ? Number(data.datasets[0].data[data.datasets[0].data.length - 1]) || 0
                         : 0}
                 </p>
-            </div> */}
+            </div>
         </div>
     );
 };
