@@ -4,14 +4,14 @@ FROM node:18-alpine AS builder
 # Define o diretório de trabalho
 WORKDIR /app
 
-# Copia os arquivos de configuração do projeto
-COPY package*.json ./
+# Copia os arquivos de configuração do projeto (da pasta pai)
+COPY ../package*.json ./
 
 # Instala as dependências
 RUN npm ci --only=production && npm cache clean --force
 
-# Copia o restante dos arquivos do projeto
-COPY . .
+# Copia o restante dos arquivos do projeto (da pasta pai)
+COPY ../ .
 
 # Define as variáveis de ambiente de build (serão injetadas pelo EasyPanel)
 ARG REACT_APP_SUPABASE_URL
@@ -29,8 +29,8 @@ FROM nginx:alpine
 # Copia o build do React para o nginx
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Copia configuração customizada do nginx
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# Copia configuração customizada do nginx (ajustar caminho)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expõe a porta 80
 EXPOSE 80
