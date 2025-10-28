@@ -1,34 +1,45 @@
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
 
+interface Lead {
+  id: string;
+  [key: string]: any;
+}
+
 const useRealtimeData = () => {
-  const [leads, setLeads] = useState([]);
-  const [schedules, setSchedules] = useState([]);
-  const [brokers, setBrokers] = useState([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [schedules, setSchedules] = useState<any[]>([]);
+  const [brokers, setBrokers] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       const { data: leadsData } = await supabase
         .from('Cadastro_Clientes')
         .select('*');
-      setLeads(leadsData);
+      setLeads(leadsData || []);
     };
 
     fetchData();
 
-    const subscription = supabase
-      .from('Cadastro_Clientes')
-      .on('INSERT', payload => {
-        setLeads(prev => [...prev, payload.new]);
-      })
-      .on('DELETE', payload => {
-        setLeads(prev => prev.filter(lead => lead.id !== payload.old.id));
-      })
+    // Realtime subscription com nova sintaxe do Supabase v2
+    const channel = supabase
+      .channel('realtime-changes')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'Cadastro_Clientes' },
+        (payload: any) => {
+          setLeads(prev => [...prev, payload.new as Lead]);
+        }
+      )
+      .on('postgres_changes', 
+        { event: 'DELETE', schema: 'public', table: 'Cadastro_Clientes' },
+        (payload: any) => {
+          setLeads(prev => prev.filter((lead: Lead) => lead.id !== payload.old.id));
+        }
+      )
       .subscribe();
 
     return () => {
-      supabase.removeSubscription(subscription);
+      supabase.removeChannel(channel);
     };
   }, []);
 

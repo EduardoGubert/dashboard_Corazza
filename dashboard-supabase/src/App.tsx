@@ -1,14 +1,14 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import './App.css';
 
 const App: React.FC = () => {
   return (
     <Router>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-      </Switch>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+      </Routes>
     </Router>
   );
 };

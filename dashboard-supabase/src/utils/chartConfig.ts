@@ -18,11 +18,11 @@ export const chartOptions = {
   },
   plugins: {
     legend: {
-      position: 'top',
+      position: 'top' as const,
     },
     tooltip: {
       callbacks: {
-        label: function (context) {
+        label: function (context: any) {
           let label = context.dataset.label || '';
           if (label) {
             label += ': ';
