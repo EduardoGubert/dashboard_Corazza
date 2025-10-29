@@ -30,7 +30,7 @@ const Dashboard: React.FC = () => {
         <div className="min-h-screen bg-gray-100">            
             <div className="w-full">                
                 <div className="p-3 sm:p-4 md:p-6">
-                    <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-800">Dashboard</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-800">Dashboard Corazza</h1>
                     
                     {/* Grid responsivo - 1 coluna no mobile, 2 no desktop */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
