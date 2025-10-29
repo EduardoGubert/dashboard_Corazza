@@ -38,7 +38,6 @@ const SchedulesChart: React.FC = () => {
         try {
             setLoading(true);
             setError(null);
-            console.log('📊 Buscando dados de agendamentos...');
             
             // ✅ Utiliza função centralizada para aplicar filtro de data
             let query = supabase
@@ -57,9 +56,6 @@ const SchedulesChart: React.FC = () => {
                 return;
             }
 
-            console.log('✅ Dados recebidos:', schedules);
-            console.log('📊 Total de registros:', schedules?.length);
-
             if (!schedules || schedules.length === 0) {
                 setData({
                     labels: [],
@@ -76,19 +72,12 @@ const SchedulesChart: React.FC = () => {
 
             // ✅ Utiliza função centralizada para agrupar por data e somar valores
             const dateMap = groupByDate(schedules, (item: any) => Number(item.agendamento) || 0);
-            
-            console.log('📅 Agendamentos por data:', dateMap);
-
+           
             // ✅ Utiliza função centralizada para ordenar datas
             const sortedDates = sortDates(Object.keys(dateMap));
 
             // ✅ Utiliza função centralizada para calcular acumulado
             const accumulatedValues = calculateAccumulated(dateMap, sortedDates);
-
-            console.log('📈 Datas:', sortedDates);
-            console.log('📈 Valores por data:', sortedDates.map(d => dateMap[d]));
-            console.log('📈 Valores acumulados:', accumulatedValues);
-            console.log('🎯 Total final de agendamentos:', accumulatedValues[accumulatedValues.length - 1] || 0);
 
             setData({
                 labels: sortedDates,
@@ -122,7 +111,6 @@ const SchedulesChart: React.FC = () => {
             .on('postgres_changes', 
                 { event: 'INSERT', schema: 'public', table: 'Cadastro_Clientes' },
                 () => {
-                    console.log('🔄 Novo agendamento inserido, atualizando gráfico...');
                     fetchSchedules();
                 }
             )

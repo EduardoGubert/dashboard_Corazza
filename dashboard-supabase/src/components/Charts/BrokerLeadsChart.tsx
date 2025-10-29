@@ -110,7 +110,6 @@ const BrokerLeadsChart: React.FC = () => {
             .on('postgres_changes', 
                 { event: 'INSERT', schema: 'public', table: 'Cadastro_Clientes' },
                 () => {
-                    console.log('🔄 Novo lead inserido, atualizando gráfico de corretores...');
                     fetchData();
                 }
             )

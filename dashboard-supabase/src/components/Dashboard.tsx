@@ -8,7 +8,6 @@ const Dashboard: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        console.log('✅ Dashboard montado');
         // Simular carregamento inicial
         setTimeout(() => {
             setIsLoading(false);

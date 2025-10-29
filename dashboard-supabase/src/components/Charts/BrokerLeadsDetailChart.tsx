@@ -36,7 +36,6 @@ const BrokerLeadsDetailChart: React.FC = () => {
         try {
             setLoading(true);
             setError(null);
-            console.log('📊 Buscando detalhes de leads por corretor...');
             
             // ✅ Utiliza função centralizada para aplicar filtro de data
             let query = supabase
@@ -54,8 +53,6 @@ const BrokerLeadsDetailChart: React.FC = () => {
                 setError(error.message);
                 return;
             }
-
-            console.log('✅ Dados recebidos:', leadsData);
 
             // ✅ Agrupar leads por corretor
             const grouped: Record<string, Lead[]> = {};
@@ -90,7 +87,6 @@ const BrokerLeadsDetailChart: React.FC = () => {
                 }))
                 .sort((a, b) => b.totalLeads - a.totalLeads);
 
-            console.log('📈 Dados agrupados:', brokersArray);
             setBrokersData(brokersArray);
         } catch (err: any) {
             console.error('❌ Erro ao processar dados:', err);
@@ -109,7 +105,6 @@ const BrokerLeadsDetailChart: React.FC = () => {
             .on('postgres_changes', 
                 { event: '*', schema: 'public', table: 'Cadastro_Clientes' },
                 () => {
-                    console.log('🔄 Mudança detectada, atualizando dados...');
                     fetchData();
                 }
             )
