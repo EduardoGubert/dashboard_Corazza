@@ -4,14 +4,14 @@ FROM node:18-alpine AS builder
 # Define o diretório de trabalho
 WORKDIR /app
 
-# Copia package.json E package-lock.json da pasta pai
-COPY ../package.json ../package-lock.json ./
+# Copia package.json e package-lock.json
+COPY package.json package-lock.json ./
 
-# Instala dependências
-RUN npm ci
+# Instala dependências (usa legacy-peer-deps para resolver conflitos)
+RUN npm install --legacy-peer-deps
 
-# Copia todo o código fonte da pasta pai
-COPY ../ ./
+# Copia todo o código fonte
+COPY . ./
 
 # Build args
 ARG REACT_APP_SUPABASE_URL
