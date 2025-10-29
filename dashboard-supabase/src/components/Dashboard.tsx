@@ -27,21 +27,24 @@ const Dashboard: React.FC = () => {
     }
 
     return (
-        <div className="flex min-h-screen bg-gray-100">            
-            <div className="flex-1">                
-                <div className="p-4">
-                    <h1 className="text-3xl font-bold mb-6 text-gray-800">Dashboard</h1>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white shadow-lg rounded-lg p-6">
+        <div className="min-h-screen bg-gray-100">            
+            <div className="w-full">                
+                <div className="p-3 sm:p-4 md:p-6">
+                    <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-800">Dashboard</h1>
+                    
+                    {/* Grid responsivo - 1 coluna no mobile, 2 no desktop */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                        {/* Cada gráfico em um card */}
+                        <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
                             <LeadsChart />
                         </div>
-                        <div className="bg-white shadow-lg rounded-lg p-6">
+                        <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
                             <SchedulesChart />
                         </div>
-                        <div className="bg-white shadow-lg rounded-lg p-6">
+                        <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
                             <BrokerLeadsDetailChart />
                         </div>
-                        <div className="bg-white shadow-lg rounded-lg p-6">
+                        <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6">
                             <BrokerLeadsChart />
                         </div>
                     </div>
