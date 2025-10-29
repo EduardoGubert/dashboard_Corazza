@@ -177,7 +177,7 @@ const LeadsChart: React.FC = () => {
 
     const options: ChartOptions<'line'> = {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false, // 👈 Mudança aqui: false para ter altura fixa
         scales: {
             x: {
                 title: {
@@ -328,7 +328,10 @@ const LeadsChart: React.FC = () => {
                 )}
             </div>
             
-            <Line data={chartData} options={options} />
+            {/* 👇 ALTURA RESPONSIVA AQUI */}
+            <div className="h-64 sm:h-80 md:h-96">
+                <Line data={chartData} options={options} />
+            </div>
             
             {/* Informação adicional */}
             <div className="mt-4 text-sm text-gray-600">
