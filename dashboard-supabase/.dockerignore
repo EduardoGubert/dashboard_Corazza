@@ -20,3 +20,17 @@ coverage
 dist
 logs
 *.log
+
+# Server files
+server/node_modules
+server/auth.db
+server/.env
+server/npm-debug.log
+server/logs
+server/data
+
+# Documentation
+AUTH_README.md
+QUICK_START.md
+DEPLOY_EASYPANEL.md
+REFACTORING.md
