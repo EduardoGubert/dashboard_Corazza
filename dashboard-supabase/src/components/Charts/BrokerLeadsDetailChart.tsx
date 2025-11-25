@@ -13,6 +13,7 @@ interface Lead {
     telefoneCliente: string;
     corretor_responsavel: string;
     created_at: string;
+    data_agendamento: string | null;
 }
 
 interface BrokerLeadsDetail {
@@ -40,7 +41,7 @@ const BrokerLeadsDetailChart: React.FC = () => {
             // ✅ Utiliza função centralizada para aplicar filtro de data
             let query = supabase
                 .from('Cadastro_Clientes')
-                .select('id, nomeCliente, telefoneCliente, corretor_responsavel, created_at')
+                .select('id, nomeCliente, telefoneCliente, corretor_responsavel, created_at, data_agendamento')
                 .not('corretor_responsavel', 'is', null)
                 .order('created_at', { ascending: false });
 
@@ -73,7 +74,8 @@ const BrokerLeadsDetailChart: React.FC = () => {
                     nomeCliente: lead.nomeCliente || 'Não informado',
                     telefoneCliente: lead.telefoneCliente || 'Não informado',
                     corretor_responsavel: corretor,
-                    created_at: lead.created_at
+                    created_at: lead.created_at,
+                    data_agendamento: lead.data_agendamento || null
                 });
             });
 
@@ -186,7 +188,8 @@ const BrokerLeadsDetailChart: React.FC = () => {
                                             <tr>
                                                 <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-semibold text-gray-700">Cliente</th>
                                                 <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-semibold text-gray-700">Telefone</th>
-                                                <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-semibold text-gray-700">Data</th>
+                                                <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-semibold text-gray-700">Data Entrada Lead</th>
+                                                <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-semibold text-gray-700">Data Agendamento</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -202,6 +205,17 @@ const BrokerLeadsDetailChart: React.FC = () => {
                                                             hour: '2-digit',
                                                             minute: '2-digit'
                                                         })}
+                                                    </td>
+                                                    <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-500">
+                                                        {lead.data_agendamento
+                                                            ? new Date(lead.data_agendamento).toLocaleDateString('pt-BR', {
+                                                                day: '2-digit',
+                                                                month: '2-digit',
+                                                                year: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })
+                                                            : ''}
                                                     </td>
                                                 </tr>
                                             ))}
