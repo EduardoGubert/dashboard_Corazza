@@ -1,56 +1,28 @@
-version: "3.7"
+version: '3.8'
 
 services:
-  # Servidor de Autenticação (Backend)
-  auth-server:
-    image: eduardogubert/dashboard-auth-server:latest
+  dashboard:
+    container_name: dashboard-corazza
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        - REACT_APP_SUPABASE_URL=${REACT_APP_SUPABASE_URL}
+        - REACT_APP_SUPABASE_ANON_KEY=${REACT_APP_SUPABASE_ANON_KEY}
+    ports:
+      - "80:80"
+    restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - PORT=5000
-      - JWT_SECRET=${JWT_SECRET}
-    volumes:
-      - auth-data:/app/data
     networks:
-      - network_public
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      labels:
-        - "traefik.enable=true"
-        - "traefik.docker.network=network_public"
-        - "traefik.http.routers.auth-server.rule=Host(`auth.atendimentodeia.com.br`)"
-        - "traefik.http.routers.auth-server.entrypoints=websecure"
-        - "traefik.http.routers.auth-server.tls.certresolver=letsencryptresolver"
-        - "traefik.http.routers.auth-server.service=auth-server"
-        - "traefik.http.services.auth-server.loadbalancer.server.port=5000"
-
-  # Dashboard Frontend
-  dashboard:
-    image: eduardogubert/dashboard-corazza:latest
-    networks:
-      - network_public
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      labels:
-        - "traefik.enable=true"
-        - "traefik.docker.network=network_public"
-        - "traefik.http.routers.dashboard.rule=Host(`dashboard.atendimentodeia.com.br`)"
-        - "traefik.http.routers.dashboard.entrypoints=websecure"
-        - "traefik.http.routers.dashboard.tls.certresolver=letsencryptresolver"
-        - "traefik.http.routers.dashboard.service=dashboard"
-        - "traefik.http.services.dashboard.loadbalancer.server.port=80"
-
-volumes:
-  auth-data:
+      - dashboard-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`dashboard.atendimentodeia.com.br`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dashboard.loadbalancer.server.port=80"
 
 networks:
-  network_public:
-    external: true
-    name: network_public
+  dashboard-network:
+    driver: bridge
