@@ -3,11 +3,9 @@ version: '3.8'
 services:
   # Servidor de Autenticação (Backend)
   auth-server:
-    container_name: dashboard-auth-server
     image: eduardogubert/dashboard-auth-server:latest
     ports:
       - "5000:5000"
-    restart: unless-stopped
     environment:
       - NODE_ENV=production
       - PORT=5000
@@ -16,18 +14,22 @@ services:
       - auth-data:/app/data
     networks:
       - dashboard-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
   # Dashboard Frontend
   dashboard:
-    container_name: dashboard-corazza
     image: eduardogubert/dashboard-corazza:latest
     ports:
       - "80:80"
-    restart: unless-stopped
     networks:
       - dashboard-network
-    depends_on:
-      - auth-server
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
 volumes:
   auth-data:
@@ -35,4 +37,4 @@ volumes:
 
 networks:
   dashboard-network:
-    driver: bridge
+    driver: overlay
