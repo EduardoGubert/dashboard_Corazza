@@ -5,14 +5,14 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 # Copia package.json e package-lock.json
-COPY package.json package-lock.json ./
+COPY package*.json ./
 
 # Instala dependências (usa legacy-peer-deps para resolver conflitos)
 RUN npm install --legacy-peer-deps
 
 # Copia todo o código fonte
 COPY . ./
-
+RUN npm run build
 # Build args - variáveis de ambiente do Supabase
 ARG REACT_APP_SUPABASE_URL
 ARG REACT_APP_SUPABASE_ANON_KEY
