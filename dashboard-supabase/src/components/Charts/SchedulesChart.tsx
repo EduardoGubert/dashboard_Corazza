@@ -3,15 +3,17 @@ import { Line } from 'react-chartjs-2';
 import { supabase } from '../../services/supabase';
 import { ChartData, ChartOptions } from 'chart.js';
 import { usePeriodFilter } from '../../hooks/usePeriodFilter';
+import { useEmpreendimentoFilter } from '../../hooks/useEmpreendimentoFilter';
 import PeriodSelector from '../common/PeriodSelector';
+import EmpreendimentoSelector from '../common/EmpreendimentoSelector';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import ChartContainer from '../common/ChartContainer';
-import { applyDateFilter, groupByDate, sortDates, calculateAccumulated } from '../../utils/supabaseHelpers';
+import { applyDashboardFilters, groupByDate, sortDates, calculateAccumulated } from '../../utils/supabaseHelpers';
 
-interface ScheduleData {
+interface ScheduleItem {
     created_at: string;
-    agendamento: number;
+    agendamento: number | null;
 }
 
 const SchedulesChart: React.FC = () => {
@@ -20,6 +22,7 @@ const SchedulesChart: React.FC = () => {
     
     // ✅ Hook centralizado para gerenciar o filtro de período
     const periodFilter = usePeriodFilter();
+    const empreendimentoFilter = useEmpreendimentoFilter();
     
     const [data, setData] = useState<ChartData<'line'>>({
         labels: [],
@@ -46,7 +49,10 @@ const SchedulesChart: React.FC = () => {
                 .not('agendamento', 'is', null)
                 .order('created_at', { ascending: true });
 
-            query = applyDateFilter(query, periodFilter.dateRange);
+            query = applyDashboardFilters(query, {
+                dateRange: periodFilter.dateRange,
+                empreendimento: empreendimentoFilter.selectedEmpreendimento,
+            });
 
             const { data: schedules, error } = await query;
 
@@ -71,7 +77,7 @@ const SchedulesChart: React.FC = () => {
             }
 
             // ✅ Utiliza função centralizada para agrupar por data e somar valores
-            const dateMap = groupByDate(schedules, (item: any) => Number(item.agendamento) || 0);
+            const dateMap = groupByDate(schedules as ScheduleItem[], (item) => Number(item.agendamento) || 0);
            
             // ✅ Utiliza função centralizada para ordenar datas
             const sortedDates = sortDates(Object.keys(dateMap));
@@ -103,7 +109,7 @@ const SchedulesChart: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchSchedules();
+        void fetchSchedules();
 
         // Realtime subscription com nova sintaxe do Supabase v2
         const channel = supabase
@@ -111,7 +117,7 @@ const SchedulesChart: React.FC = () => {
             .on('postgres_changes', 
                 { event: 'INSERT', schema: 'public', table: 'Cadastro_Clientes' },
                 () => {
-                    fetchSchedules();
+                    void fetchSchedules();
                 }
             )
             .subscribe();
@@ -119,7 +125,7 @@ const SchedulesChart: React.FC = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [periodFilter.dateRange]); // ✅ Depende apenas do dateRange calculado
+    }, [periodFilter.dateRange, empreendimentoFilter.selectedEmpreendimento]);
 
     const options: ChartOptions<'line'> = {
         responsive: true,
@@ -175,12 +181,32 @@ const SchedulesChart: React.FC = () => {
         return <ErrorMessage message={error} />;
     }
 
+    const accumulatedSchedulesData = data.datasets[0]?.data as number[];
+    const totalSchedules =
+        accumulatedSchedulesData.length > 0
+            ? Number(accumulatedSchedulesData[accumulatedSchedulesData.length - 1]) || 0
+            : 0;
+    const hasNoData = !data.labels || data.labels.length === 0;
+
     return (
         <div className="w-full">
             {/* ✅ Componente reutilizável para título */}
             <ChartContainer title="Agendamentos ao Longo do Tempo">
                 {/* ✅ Componente reutilizável para seletor de período */}
                 <PeriodSelector {...periodFilter} color="purple" />
+                <EmpreendimentoSelector
+                    selectedEmpreendimento={empreendimentoFilter.selectedEmpreendimento}
+                    setSelectedEmpreendimento={empreendimentoFilter.setSelectedEmpreendimento}
+                    empreendimentos={empreendimentoFilter.empreendimentos}
+                    loading={empreendimentoFilter.isLoadingEmpreendimentos}
+                    color="purple"
+                />
+
+                {empreendimentoFilter.empreendimentoError && (
+                    <p className="mt-2 text-xs sm:text-sm text-red-600">
+                        Erro ao carregar empreendimentos: {empreendimentoFilter.empreendimentoError}
+                    </p>
+                )}
                 
                 {/* Gráfico com altura responsiva */}
                 <div className="h-72 sm:h-80 md:h-96">
@@ -191,10 +217,13 @@ const SchedulesChart: React.FC = () => {
                 <div className="mt-4 text-xs sm:text-sm text-gray-600">
                     <p>
                         <strong>Total de agendamentos no período:</strong> {' '}
-                        {data.datasets[0].data.length > 0 
-                            ? Number(data.datasets[0].data[data.datasets[0].data.length - 1]) || 0
-                            : 0}
+                        {totalSchedules}
                     </p>
+                    {hasNoData && (
+                        <p className="mt-1 text-gray-500">
+                            Nenhum agendamento encontrado para os filtros selecionados.
+                        </p>
+                    )}
                 </div>
             </ChartContainer>
         </div>

@@ -3,25 +3,19 @@ import { Line } from 'react-chartjs-2';
 import { supabase } from '../../services/supabase';
 import { ChartData, ChartOptions } from 'chart.js';
 import { usePeriodFilter } from '../../hooks/usePeriodFilter';
+import { useEmpreendimentoFilter } from '../../hooks/useEmpreendimentoFilter';
 import PeriodSelector from '../common/PeriodSelector';
+import EmpreendimentoSelector from '../common/EmpreendimentoSelector';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import ChartContainer from '../common/ChartContainer';
-import { applyDateFilter, groupByDate, sortDates, calculateAccumulated } from '../../utils/supabaseHelpers';
+import { applyDashboardFilters, groupByDate, sortDates, calculateAccumulated } from '../../utils/supabaseHelpers';
 
 const LeadsChart: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const {
-        period,
-        setPeriod,
-        customStartDate,
-        setCustomStartDate,
-        customEndDate,
-        setCustomEndDate,
-        dateRange,
-        daysInRange,
-    } = usePeriodFilter();
+    const periodFilter = usePeriodFilter();
+    const empreendimentoFilter = useEmpreendimentoFilter();
 
     const [chartData, setChartData] = useState<ChartData<'line'>>({
         labels: [],
@@ -46,7 +40,10 @@ const LeadsChart: React.FC = () => {
                 .select('created_at')
                 .order('created_at', { ascending: true });
 
-            query = applyDateFilter(query, dateRange);
+            query = applyDashboardFilters(query, {
+                dateRange: periodFilter.dateRange,
+                empreendimento: empreendimentoFilter.selectedEmpreendimento,
+            });
 
             const { data, error } = await query;
 
@@ -98,17 +95,19 @@ const LeadsChart: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchLeadsData();
+        void fetchLeadsData();
 
         const channel = supabase
             .channel('leads-changes')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'Cadastro_Clientes' }, fetchLeadsData)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'Cadastro_Clientes' }, () => {
+                void fetchLeadsData();
+            })
             .subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [period, customStartDate, customEndDate]);
+    }, [periodFilter.dateRange, empreendimentoFilter.selectedEmpreendimento]);
 
     const options: ChartOptions<'line'> = {
         responsive: true,
@@ -138,18 +137,29 @@ const LeadsChart: React.FC = () => {
     if (loading) return <LoadingSpinner color="teal" />;
     if (error) return <ErrorMessage message={error} />;
 
+    const accumulatedLeadsData = chartData.datasets[0]?.data as number[];
+    const totalLeads =
+        accumulatedLeadsData.length > 0
+            ? Number(accumulatedLeadsData[accumulatedLeadsData.length - 1]) || 0
+            : 0;
+    const hasNoData = !chartData.labels || chartData.labels.length === 0;
+
     return (
         <ChartContainer title="Entrada de Leads ao Longo do Tempo">
-            <PeriodSelector
-                period={period}
-                setPeriod={setPeriod}
-                customStartDate={customStartDate}
-                setCustomStartDate={setCustomStartDate}
-                customEndDate={customEndDate}
-                setCustomEndDate={setCustomEndDate}
-                daysInRange={daysInRange}
+            <PeriodSelector {...periodFilter} color="teal" />
+            <EmpreendimentoSelector
+                selectedEmpreendimento={empreendimentoFilter.selectedEmpreendimento}
+                setSelectedEmpreendimento={empreendimentoFilter.setSelectedEmpreendimento}
+                empreendimentos={empreendimentoFilter.empreendimentos}
+                loading={empreendimentoFilter.isLoadingEmpreendimentos}
                 color="teal"
             />
+
+            {empreendimentoFilter.empreendimentoError && (
+                <p className="mt-2 text-xs sm:text-sm text-red-600">
+                    Erro ao carregar empreendimentos: {empreendimentoFilter.empreendimentoError}
+                </p>
+            )}
 
             <div className="w-full h-72 sm:h-80 md:h-96 mt-4">
                 <Line data={chartData} options={options} />
@@ -158,10 +168,9 @@ const LeadsChart: React.FC = () => {
             <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600">
                 <p>
                     <strong>Total de leads no período:</strong>{' '}
-                    {chartData.datasets[0].data.length > 0
-                        ? Number(chartData.datasets[0].data[chartData.datasets[0].data.length - 1]) || 0
-                        : 0}
+                    {totalLeads}
                 </p>
+                {hasNoData && <p className="mt-1 text-gray-500">Nenhum lead encontrado para os filtros selecionados.</p>}
             </div>
         </ChartContainer>
     );

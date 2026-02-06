@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { usePeriodFilter } from '../../hooks/usePeriodFilter';
+import { useEmpreendimentoFilter } from '../../hooks/useEmpreendimentoFilter';
 import PeriodSelector from '../common/PeriodSelector';
+import EmpreendimentoSelector from '../common/EmpreendimentoSelector';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import ChartContainer from '../common/ChartContainer';
-import { applyDateFilter } from '../../utils/supabaseHelpers';
+import { applyDashboardFilters } from '../../utils/supabaseHelpers';
 
 interface Lead {
     id: number;
@@ -29,6 +31,7 @@ const BrokerLeadsDetailChart: React.FC = () => {
     
     // ✅ Hook centralizado para gerenciar o filtro de período
     const periodFilter = usePeriodFilter();
+    const empreendimentoFilter = useEmpreendimentoFilter();
     
     const [brokersData, setBrokersData] = useState<BrokerLeadsDetail[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -45,7 +48,10 @@ const BrokerLeadsDetailChart: React.FC = () => {
                 .not('corretor_responsavel', 'is', null)
                 .order('created_at', { ascending: false });
 
-            query = applyDateFilter(query, periodFilter.dateRange);
+            query = applyDashboardFilters(query, {
+                dateRange: periodFilter.dateRange,
+                empreendimento: empreendimentoFilter.selectedEmpreendimento,
+            });
 
             const { data: leadsData, error } = await query;
 
@@ -99,7 +105,7 @@ const BrokerLeadsDetailChart: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchData();
+        void fetchData();
 
         // Realtime subscription
         const channel = supabase
@@ -107,7 +113,7 @@ const BrokerLeadsDetailChart: React.FC = () => {
             .on('postgres_changes', 
                 { event: '*', schema: 'public', table: 'Cadastro_Clientes' },
                 () => {
-                    fetchData();
+                    void fetchData();
                 }
             )
             .subscribe();
@@ -115,7 +121,7 @@ const BrokerLeadsDetailChart: React.FC = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [periodFilter.dateRange]); // ✅ Depende apenas do dateRange calculado
+    }, [periodFilter.dateRange, empreendimentoFilter.selectedEmpreendimento]);
 
     const toggleExpand = (index: number) => {
         setBrokersData(prev => prev.map((broker, i) => 
@@ -143,6 +149,19 @@ const BrokerLeadsDetailChart: React.FC = () => {
             <ChartContainer title="Detalhamento de Leads por Corretor">
                 {/* ✅ Componente reutilizável para seletor de período */}
                 <PeriodSelector {...periodFilter} color="blue" />
+                <EmpreendimentoSelector
+                    selectedEmpreendimento={empreendimentoFilter.selectedEmpreendimento}
+                    setSelectedEmpreendimento={empreendimentoFilter.setSelectedEmpreendimento}
+                    empreendimentos={empreendimentoFilter.empreendimentos}
+                    loading={empreendimentoFilter.isLoadingEmpreendimentos}
+                    color="blue"
+                />
+
+                {empreendimentoFilter.empreendimentoError && (
+                    <p className="mt-2 text-xs sm:text-sm text-red-600">
+                        Erro ao carregar empreendimentos: {empreendimentoFilter.empreendimentoError}
+                    </p>
+                )}
 
                 {/* Campo de busca */}
                 <div className="mb-3 sm:mb-4">
@@ -157,6 +176,11 @@ const BrokerLeadsDetailChart: React.FC = () => {
 
                 {/* Lista de corretores com altura responsiva */}
                 <div className="space-y-3 max-h-72 sm:max-h-80 md:max-h-96 overflow-y-auto">
+                    {filteredBrokers.length === 0 && (
+                        <p className="text-sm text-gray-500 px-2 py-1">
+                            Nenhum corretor encontrado para os filtros selecionados.
+                        </p>
+                    )}
                     {filteredBrokers.map((broker, index) => (
                         <div key={broker.corretor} className="border border-gray-300 rounded-lg overflow-hidden">
                             {/* Cabeçalho do corretor */}

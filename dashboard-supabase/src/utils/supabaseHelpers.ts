@@ -16,8 +16,39 @@ export function applyDateFilter<T>(
     return query;
 }
 
+export interface DashboardFilters {
+    dateRange: DateRange;
+    empreendimento?: string;
+}
+
 /**
- * Formata data para exibição em português
+ * Aplica filtro de empreendimento em uma query do Supabase
+ */
+export function applyEmpreendimentoFilter(
+    query: any,
+    empreendimento?: string
+): any {
+    if (empreendimento && empreendimento.trim() !== '') {
+        query = query.eq('empreendimento', empreendimento);
+    }
+
+    return query;
+}
+
+/**
+ * Aplica filtros combinados (periodo + empreendimento)
+ */
+export function applyDashboardFilters(
+    query: any,
+    filters: DashboardFilters
+): any {
+    query = applyDateFilter(query, filters.dateRange);
+    query = applyEmpreendimentoFilter(query, filters.empreendimento);
+    return query;
+}
+
+/**
+ * Formata data para exibicao em portugues
  */
 export function formatDate(date: string): string {
     return new Date(date).toLocaleDateString('pt-BR', {

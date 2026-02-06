@@ -3,11 +3,13 @@ import { supabase } from '../../services/supabase';
 import { Bar } from 'react-chartjs-2';
 import { ChartData, ChartOptions } from 'chart.js';
 import { usePeriodFilter } from '../../hooks/usePeriodFilter';
+import { useEmpreendimentoFilter } from '../../hooks/useEmpreendimentoFilter';
 import PeriodSelector from '../common/PeriodSelector';
+import EmpreendimentoSelector from '../common/EmpreendimentoSelector';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import ChartContainer from '../common/ChartContainer';
-import { applyDateFilter } from '../../utils/supabaseHelpers';
+import { applyDashboardFilters } from '../../utils/supabaseHelpers';
 
 interface BrokerData {
     corretor_responsavel: string;
@@ -20,6 +22,7 @@ const BrokerLeadsChart: React.FC = () => {
     
     // ✅ Hook centralizado para gerenciar o filtro de período
     const periodFilter = usePeriodFilter();
+    const empreendimentoFilter = useEmpreendimentoFilter();
     
     const [data, setData] = useState<ChartData<'bar'>>({
         labels: [],
@@ -45,7 +48,10 @@ const BrokerLeadsChart: React.FC = () => {
                 .select('corretor_responsavel, created_at')
                 .not('corretor_responsavel', 'is', null);
 
-            query = applyDateFilter(query, periodFilter.dateRange);
+            query = applyDashboardFilters(query, {
+                dateRange: periodFilter.dateRange,
+                empreendimento: empreendimentoFilter.selectedEmpreendimento,
+            });
 
             const { data: leadsData, error } = await query;
 
@@ -102,7 +108,7 @@ const BrokerLeadsChart: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchData();
+        void fetchData();
 
         // Realtime subscription
         const channel = supabase
@@ -110,7 +116,7 @@ const BrokerLeadsChart: React.FC = () => {
             .on('postgres_changes', 
                 { event: 'INSERT', schema: 'public', table: 'Cadastro_Clientes' },
                 () => {
-                    fetchData();
+                    void fetchData();
                 }
             )
             .subscribe();
@@ -118,7 +124,7 @@ const BrokerLeadsChart: React.FC = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [periodFilter.dateRange]); // ✅ Depende apenas do dateRange calculado
+    }, [periodFilter.dateRange, empreendimentoFilter.selectedEmpreendimento]);
 
     const options: ChartOptions<'bar'> = {
         responsive: true,
@@ -171,12 +177,28 @@ const BrokerLeadsChart: React.FC = () => {
         return <ErrorMessage message={error} />;
     }
 
+    const totalActiveBrokers = data.labels?.length || 0;
+    const hasNoData = totalActiveBrokers === 0;
+
     return (
         <div className="w-full">
             {/* ✅ Componente reutilizável para título */}
             <ChartContainer title="Quantidade de Leads por Corretor">
                 {/* ✅ Componente reutilizável para seletor de período */}
                 <PeriodSelector {...periodFilter} color="green" />
+                <EmpreendimentoSelector
+                    selectedEmpreendimento={empreendimentoFilter.selectedEmpreendimento}
+                    setSelectedEmpreendimento={empreendimentoFilter.setSelectedEmpreendimento}
+                    empreendimentos={empreendimentoFilter.empreendimentos}
+                    loading={empreendimentoFilter.isLoadingEmpreendimentos}
+                    color="green"
+                />
+
+                {empreendimentoFilter.empreendimentoError && (
+                    <p className="mt-2 text-xs sm:text-sm text-red-600">
+                        Erro ao carregar empreendimentos: {empreendimentoFilter.empreendimentoError}
+                    </p>
+                )}
                 
                 {/* Gráfico com altura responsiva */}
                 <div className="h-72 sm:h-80 md:h-96">
@@ -186,8 +208,9 @@ const BrokerLeadsChart: React.FC = () => {
                 {/* Informação adicional */}
                 <div className="mt-4 text-xs sm:text-sm text-gray-600">
                     <p>
-                        <strong>Total de corretores ativos:</strong> {data.labels?.length || 0}
+                        <strong>Total de corretores ativos:</strong> {totalActiveBrokers}
                     </p>
+                    {hasNoData && <p className="mt-1 text-gray-500">Nenhum corretor encontrado para os filtros selecionados.</p>}
                 </div>
             </ChartContainer>
         </div>
