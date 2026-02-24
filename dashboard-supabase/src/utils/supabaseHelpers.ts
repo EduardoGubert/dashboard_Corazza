@@ -5,13 +5,14 @@ import { DateRange } from '../hooks/usePeriodFilter';
  */
 export function applyDateFilter<T>(
     query: any,
-    dateRange: DateRange
+    dateRange: DateRange,
+    dateColumn: string = 'created_at'
 ): any {
     if (dateRange.startDate) {
-        query = query.gte('created_at', dateRange.startDate.toISOString());
+        query = query.gte(dateColumn, dateRange.startDate.toISOString());
     }
     if (dateRange.endDate) {
-        query = query.lte('created_at', dateRange.endDate.toISOString());
+        query = query.lte(dateColumn, dateRange.endDate.toISOString());
     }
     return query;
 }
@@ -19,6 +20,7 @@ export function applyDateFilter<T>(
 export interface DashboardFilters {
     dateRange: DateRange;
     empreendimento?: string;
+    dateColumn?: string;
 }
 
 /**
@@ -42,7 +44,7 @@ export function applyDashboardFilters(
     query: any,
     filters: DashboardFilters
 ): any {
-    query = applyDateFilter(query, filters.dateRange);
+    query = applyDateFilter(query, filters.dateRange, filters.dateColumn ?? 'created_at');
     query = applyEmpreendimentoFilter(query, filters.empreendimento);
     return query;
 }

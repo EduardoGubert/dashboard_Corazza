@@ -51,6 +51,7 @@ const BrokerLeadsChart: React.FC = () => {
             query = applyDashboardFilters(query, {
                 dateRange: periodFilter.dateRange,
                 empreendimento: empreendimentoFilter.selectedEmpreendimento,
+                dateColumn: 'data_atribuicao_corretor',
             });
 
             const { data: leadsData, error } = await query;

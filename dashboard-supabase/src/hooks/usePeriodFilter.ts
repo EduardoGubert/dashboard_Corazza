@@ -21,14 +21,23 @@ export const usePeriodFilter = () => {
             case '7days':
                 startDate = new Date(now);
                 startDate.setDate(startDate.getDate() - 7);
+                startDate.setHours(0, 0, 0, 0);
+                endDate = new Date(now);
+                endDate.setHours(23, 59, 59, 999);
                 break;
             case '30days':
                 startDate = new Date(now);
                 startDate.setDate(startDate.getDate() - 30);
+                startDate.setHours(0, 0, 0, 0);
+                endDate = new Date(now);
+                endDate.setHours(23, 59, 59, 999);
                 break;
             case '90days':
                 startDate = new Date(now);
                 startDate.setDate(startDate.getDate() - 90);
+                startDate.setHours(0, 0, 0, 0);
+                endDate = new Date(now);
+                endDate.setHours(23, 59, 59, 999);
                 break;
             case 'custom':
                 if (customStartDate) {

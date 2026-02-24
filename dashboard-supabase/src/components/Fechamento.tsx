@@ -16,7 +16,7 @@ interface Lead {
     telefoneCliente: string;
     corretor_responsavel: string;
     created_at: string;
-    data_agendamento: string | null;
+    data_atribuicao_corretor: string | null;
     fechado: boolean;
     usuario_fechou: string | null;
     dataFechamento: string | null;
@@ -49,13 +49,14 @@ const Fechamento: React.FC = () => {
             
             let query = supabase
                 .from('Cadastro_Clientes')
-                .select('id, nomeCliente, telefoneCliente, corretor_responsavel, created_at, data_agendamento, fechado, usuario_fechou, dataFechamento, DataAtualizacao')
+                .select('id, nomeCliente, telefoneCliente, corretor_responsavel, created_at, data_atribuicao_corretor, fechado, usuario_fechou, dataFechamento, DataAtualizacao')
                 .not('corretor_responsavel', 'is', null)
                 .order('created_at', { ascending: false });
 
             query = applyDashboardFilters(query, {
                 dateRange: periodFilter.dateRange,
                 empreendimento: empreendimentoFilter.selectedEmpreendimento,
+                dateColumn: 'data_atribuicao_corretor',
             });
 
             const { data: leadsData, error } = await query;
@@ -86,7 +87,7 @@ const Fechamento: React.FC = () => {
                     telefoneCliente: lead.telefoneCliente || 'Não informado',
                     corretor_responsavel: corretor,
                     created_at: lead.created_at,
-                    data_agendamento: lead.data_agendamento || null,
+                    data_atribuicao_corretor: lead.data_atribuicao_corretor || null,
                     fechado: lead.fechado || false,
                     usuario_fechou: lead.usuario_fechou || null,
                     dataFechamento: lead.dataFechamento || null,
@@ -309,7 +310,7 @@ const Fechamento: React.FC = () => {
                                                     <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700">Cliente</th>
                                                     <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700">Telefone</th>
                                                     <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700">Data Entrada Lead</th>
-                                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700">Data Agendamento</th>
+                                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700">Data Atribuição Corretor</th>
                                                     <th className="px-2 py-2 text-center text-xs font-semibold text-gray-700">Fechado</th>
                                                     <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700">Usuário</th>
                                                     <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700">Dt Fechamento</th>
@@ -333,8 +334,8 @@ const Fechamento: React.FC = () => {
                                                             })}
                                                         </td>
                                                         <td className="px-2 py-2 text-xs text-gray-500">
-                                                            {lead.data_agendamento
-                                                                ? new Date(lead.data_agendamento).toLocaleDateString('pt-BR', {
+                                                            {lead.data_atribuicao_corretor
+                                                                ? new Date(lead.data_atribuicao_corretor).toLocaleDateString('pt-BR', {
                                                                     day: '2-digit',
                                                                     month: '2-digit',
                                                                     year: 'numeric'
