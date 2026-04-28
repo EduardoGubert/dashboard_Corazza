@@ -8,6 +8,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import ChartContainer from '../common/ChartContainer';
 import { applyDashboardFilters } from '../../utils/supabaseHelpers';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Lead {
     id: number;
@@ -16,6 +17,9 @@ interface Lead {
     corretor_responsavel: string;
     created_at: string;
     data_atribuicao_corretor: string | null;
+    reagendar: boolean;
+    usuario_reagendou: string | null;
+    DataAtualizacao: string | null;
 }
 
 interface BrokerLeadsDetail {
@@ -28,11 +32,13 @@ interface BrokerLeadsDetail {
 const BrokerLeadsDetailChart: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
+    const [updating, setUpdating] = useState<number | null>(null);
+    const { user } = useAuth();
+
     // ✅ Hook centralizado para gerenciar o filtro de período
     const periodFilter = usePeriodFilter();
     const empreendimentoFilter = useEmpreendimentoFilter();
-    
+
     const [brokersData, setBrokersData] = useState<BrokerLeadsDetail[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -44,7 +50,7 @@ const BrokerLeadsDetailChart: React.FC = () => {
             // ✅ Utiliza função centralizada para aplicar filtro de data
             let query = supabase
                 .from('Cadastro_Clientes')
-                .select('id, nomeCliente, telefoneCliente, corretor_responsavel, created_at, data_atribuicao_corretor')
+                .select('id, nomeCliente, telefoneCliente, corretor_responsavel, created_at, data_atribuicao_corretor, reagendar, usuario_reagendou, DataAtualizacao')
                 .not('corretor_responsavel', 'is', null)
                 .order('created_at', { ascending: false });
 
@@ -82,7 +88,10 @@ const BrokerLeadsDetailChart: React.FC = () => {
                     telefoneCliente: lead.telefoneCliente || 'Não informado',
                     corretor_responsavel: corretor,
                     created_at: lead.created_at,
-                    data_atribuicao_corretor: lead.data_atribuicao_corretor || null
+                    data_atribuicao_corretor: lead.data_atribuicao_corretor || null,
+                    reagendar: lead.reagendar ?? false,
+                    usuario_reagendou: lead.usuario_reagendou ?? null,
+                    DataAtualizacao: lead.DataAtualizacao ?? null
                 });
             });
 
@@ -125,9 +134,49 @@ const BrokerLeadsDetailChart: React.FC = () => {
     }, [periodFilter.dateRange, empreendimentoFilter.selectedEmpreendimento]);
 
     const toggleExpand = (index: number) => {
-        setBrokersData(prev => prev.map((broker, i) => 
+        setBrokersData(prev => prev.map((broker, i) =>
             i === index ? { ...broker, isExpanded: !broker.isExpanded } : broker
         ));
+    };
+
+    const toggleReagendar = async (leadId: number, currentStatus: boolean) => {
+        try {
+            setUpdating(leadId);
+            const agora = new Date().toISOString();
+            const novoStatus = !currentStatus;
+
+            const { error } = await supabase
+                .from('Cadastro_Clientes')
+                .update({
+                    reagendar: novoStatus,
+                    usuario_reagendou: novoStatus ? user?.username ?? null : null,
+                    DataAtualizacao: agora
+                })
+                .eq('id', leadId);
+
+            if (error) {
+                console.error('Erro ao atualizar reagendar:', error);
+                alert('Erro ao atualizar status de reagendamento');
+                return;
+            }
+
+            setBrokersData(prev => prev.map(broker => ({
+                ...broker,
+                leads: broker.leads.map(lead =>
+                    lead.id === leadId ? {
+                        ...lead,
+                        reagendar: novoStatus,
+                        usuario_reagendou: novoStatus ? user?.username ?? null : null,
+                        DataAtualizacao: agora
+                    } : lead
+                )
+            })));
+        } catch (err) {
+            console.error('Erro:', err);
+            alert('Erro ao atualizar status');
+        } finally {
+            setUpdating(null);
+        }
     };
 
     const filteredBrokers = brokersData.filter(broker =>
@@ -215,6 +264,7 @@ const BrokerLeadsDetailChart: React.FC = () => {
                                                 <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-semibold text-gray-700">Telefone</th>
                                                 <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-semibold text-gray-700">Data Entrada Lead</th>
                                                 <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-semibold text-gray-700">Data Atribuição Corretor</th>
+                                                <th className="px-3 sm:px-4 py-2 text-center text-xs sm:text-sm font-semibold text-gray-700">Reagendar</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -241,6 +291,31 @@ const BrokerLeadsDetailChart: React.FC = () => {
                                                                 minute: '2-digit'
                                                             })
                                                             : ''}
+                                                    </td>
+                                                    <td className="px-3 sm:px-4 py-2 text-center">
+                                                        <button
+                                                            onClick={() => toggleReagendar(lead.id, lead.reagendar)}
+                                                            disabled={updating === lead.id}
+                                                            className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-all cursor-pointer ${lead.reagendar ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-600'} ${updating === lead.id ? 'opacity-50 animate-pulse' : ''}`}
+                                                            title={lead.reagendar
+                                                                ? `Reagendado por ${lead.usuario_reagendou ?? 'desconhecido'} — clique para desmarcar`
+                                                                : 'Marcar para reagendar'}
+                                                        >
+                                                            {updating === lead.id ? (
+                                                                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                </svg>
+                                                            ) : lead.reagendar ? (
+                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                                </svg>
+                                                            ) : (
+                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                                </svg>
+                                                            )}
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}
